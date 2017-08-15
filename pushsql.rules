@@ -1,0 +1,107 @@
+// 1wire.rules
+rule "Send 1wire Temp to remote SQL-DB"
+when
+  // http://www.cronmaker.com/ 
+  // every 20 minutes
+  Time cron "0 0/20 * 1/1 * ? *" or
+  Item Temp_1W_PushWeb changed from OFF to ON 
+then
+    var String cmdMsgHost="220.123.123.123"
+    var String cmdMsgUser="myuser"
+    var String cmdMsgPassword="mypassword"
+    var String cmdMsgDB="myusrdb"
+ 
+    if(Temp_1W_Aussen.state			==NULL){	postUpdate(Temp_1W_Aussen, 0) }
+    if(Temp_1W_Wintergarten.state	==NULL){	postUpdate(Temp_1W_Wintergarten, 0) }
+    if(Temp_1W_Zimmer.state			==NULL){	postUpdate(Temp_1W_Zimmer, 0) }
+    if(Temp_1W_Terrasse.state		==NULL){	postUpdate(Temp_1W_Terrasse, 0) }
+
+    if(Temp_1W_Pool.state			==NULL){	postUpdate(Temp_1W_Pool, 0) }
+    if(Temp_1W_WW_Speicher.state	==NULL){	postUpdate(Temp_1W_WW_Speicher, 0) }
+    if(Temp_1W_Vorlauf.state		==NULL){	postUpdate(Temp_1W_Vorlauf, 0) }
+    if(Temp_1W_Ruecklauf.state		==NULL){	postUpdate(Temp_1W_Ruecklauf, 0) }
+
+    var String cmdExe="/home/openhabian/pushsql.sh "
+    var String         cmdMsgTemp = String::format("%.1f ", (Temp_1W_Aussen.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Wintergarten.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Zimmer.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Terrasse.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Pool.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_WW_Speicher.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Vorlauf.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Ruecklauf.state as DecimalType).floatValue())
+    
+    var String cmdAll=cmdExe
+    cmdAll=cmdAll + " -H \"" + cmdMsgHost + "\" "
+    cmdAll=cmdAll + " -u \"" + cmdMsgUser + "\" " 
+    cmdAll=cmdAll + " -p \"" + cmdMsgPassword + "\" " 
+    cmdAll=cmdAll + " -d \"" + cmdMsgDB + "\" " 
+    cmdAll=cmdAll + cmdMsgTemp
+    // logInfo("1wire:Exec", "calling script:\n" + cmdAll) 
+    var String cmdRet=executeCommandLine(cmdAll,1000)
+    logInfo("1wire:Exec", "Results from SQL script:\n" + cmdRet)
+    val DateTime MoveMoment = now
+    Temp_1W_DateWeb.postUpdate(new DateTimeType(MoveMoment.toString))
+    // logInfo("1wire:Exec", "update time " + Temp_1W_Date.state)
+    postUpdate(Temp_1W_PushWeb, OFF)    
+end
+
+rule "Send 1wire Temp to local SQL-DB"
+when
+  // http://www.cronmaker.com/ 
+  // every 5 minutes
+  Time cron "0 0/5 * 1/1 * ? *" or
+  Item Temp_1W_Push changed from OFF to ON 
+then
+    var String cmdMsgHost="192.168.178.72"
+    var String cmdMsgUser="root"
+    var String cmdMsgPassword="nxt2008"
+    var String cmdMsgDB="avrio"
+
+    if(Temp_1W_Aussen.state			==NULL){	postUpdate(Temp_1W_Aussen, 0) }
+    if(Temp_1W_Wintergarten.state	==NULL){	postUpdate(Temp_1W_Wintergarten, 0) }
+    if(Temp_1W_Zimmer.state			==NULL){	postUpdate(Temp_1W_Zimmer, 0) }
+    if(Temp_1W_Terrasse.state		==NULL){	postUpdate(Temp_1W_Terrasse, 0) }
+
+    if(Temp_1W_Pool.state			==NULL){	postUpdate(Temp_1W_Pool, 0) }
+    if(Temp_1W_WW_Speicher.state	==NULL){	postUpdate(Temp_1W_WW_Speicher, 0) }
+    if(Temp_1W_Vorlauf.state		==NULL){	postUpdate(Temp_1W_Vorlauf, 0) }
+    if(Temp_1W_Ruecklauf.state		==NULL){	postUpdate(Temp_1W_Ruecklauf, 0) }
+
+	// use the lower of the two temperatures outside to avoid a sensor is exposed to the sun
+	if(Temp_1W_Aussen.state	!=NULL && Temp_1W_Terrasse.state !=NULL) {
+		var double aussen  = (Temp_1W_Aussen.state as DecimalType).doubleValue
+		var double terasse = (Temp_1W_Terrasse.state as DecimalType).doubleValue
+		if( aussen < terasse) {
+			postUpdate(Temp_1W_AussenMin, aussen) 
+		}
+		else {
+			postUpdate(Temp_1W_AussenMin, terasse) 
+		}
+	}
+
+    var String cmdExe="/home/openhabian/pushsql.sh "
+    var String         cmdMsgTemp = String::format("%.1f ", (Temp_1W_Aussen.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Wintergarten.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Zimmer.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Terrasse.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Pool.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_WW_Speicher.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Vorlauf.state as DecimalType).floatValue())
+    cmdMsgTemp = cmdMsgTemp + " " + String::format("%.1f ", (Temp_1W_Ruecklauf.state as DecimalType).floatValue())
+    
+    var String cmdAll=cmdExe
+    cmdAll=cmdAll + " -H \"" + cmdMsgHost + "\" "
+    cmdAll=cmdAll + " -u \"" + cmdMsgUser + "\" " 
+    cmdAll=cmdAll + " -p \"" + cmdMsgPassword + "\" " 
+    cmdAll=cmdAll + " -d \"" + cmdMsgDB + "\" " 
+    cmdAll=cmdAll + cmdMsgTemp
+    // logInfo("1wire:Exec", "calling script:\n" + cmdAll) 
+    var String cmdRet=executeCommandLine(cmdAll,1000)
+    logInfo("1wire:Exec", "Results from SQL script:\n" + cmdRet)
+    val DateTime MoveMoment = now
+    Temp_1W_Date.postUpdate(new DateTimeType(MoveMoment.toString))
+    // logInfo("1wire:Exec", "update time " + Temp_1W_Date.state)
+    postUpdate(Temp_1W_Push, OFF)    
+    // logInfo("1wire:Exec", "post update " + Temp_1W_Push.state)
+end
