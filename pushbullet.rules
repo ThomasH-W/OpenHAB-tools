@@ -1,0 +1,11 @@
+rule MqttMessageChanged_On
+when
+  Item mqttMessage changed to ON
+then
+    postUpdate(homie_switch,ON)
+    var String cmdExe="/home/openhabian/pushbullet.sh "
+    var String cmdMsg="homie switch ON"
+    var String cmdAll=cmdExe + " \"" + cmdMsg + "\""
+    var String cmdRet=executeCommandLine(cmdAll,1000)
+    logInfo("Exec", "Results from script:\n" + cmdRet)    
+end
